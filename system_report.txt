@@ -1,0 +1,59 @@
+# Pharmacy POS (Point of Sale) System Report
+
+## Project Overview
+**Project Name:** Pharmacy POS
+**Platform:** Web-based Application
+**Framework:** Laravel 10.x
+**Description:** A comprehensive Point of Sale and Inventory Management system tailored for pharmacies. It handles sales processing, medicine inventory tracking, customer relationships, and financial transactions (payments/dues).
+
+## Technology Stack
+- **Backend:** PHP 8.1+, Laravel 10
+- **Frontend:** Vite, Axios, Blade Templates, CSS/JS
+- **Database:** Relational Database (MySQL/SQLite/PostgreSQL supported by Laravel)
+- **PDF Generation:** barryvdh/laravel-dompdf
+- **Development Tools:** Laravel Sail, Pint, Tinker
+
+## Key Features
+1. **Dashboard:** Real-time overview of business performance (assumed from DashboardController).
+2. **Point of Sale (POS):** 
+   - Interactive interface to process sales.
+   - Real-time stock updates.
+   - Automatic invoice generation.
+3. **Inventory Management (Medicines):**
+   - CRUD operations for medicines.
+   - Tracking by Name, Generic Name, Brand, Category, and Barcode.
+   - Stock and price management (Purchase vs Sell price).
+   - Activity status (Active/Inactive).
+4. **Customer Management:**
+   - Database of customers with contact info.
+   - Tracking of total dues per customer.
+   - Detailed payment history for each customer.
+5. **Invoice System:**
+   - Digital invoice viewing.
+   - Export invoices to PDF format for printing.
+6. **Sales Tracking:**
+   - Detailed sale records including items, totals, paid amounts, and dues.
+   - Invoice numbering.
+
+## Database Schema (Core Models)
+- **User:** Authentication and administration.
+- **Medicine:** name, generic_name, brand, category, barcode, purchase_price, sell_price, stock, is_active.
+- **Customer:** name, phone, total_due.
+- **Sale:** customer_id, invoice_no, total, paid, due.
+- **SaleItem:** sale_id, medicine_id, quantity, unit_price, subtotal.
+- **Payment:** customer_id, amount, note.
+- **Batch:** Placeholder for future batch-wise tracking features.
+
+## Architecture
+- **Controllers:** Organized by domain (POS, Sale, Medicine, Customer, Dashboard, Invoice).
+- **Routes:** Structured RESTful and action-based web routes.
+- **Seeders:** Includes a robust `MedicineSeeder` with over 100 common Bangladeshi pharmacy medicine brands and categories.
+- **Migrations:** Evolutionary database schema with field updates for customers and sales.
+
+## Testing & Validation
+- **Feature Tests:**
+  - `SaleFlowTest`: Validates the end-to-end process of creating a sale and its impact on inventory/accounts.
+  - `CustomerPaymentTest`: Verifies customer payment processing and due updates.
+
+## Current Status
+The system is functional with core POS, Inventory, and Customer features implemented. It includes a rich set of seed data for quick deployment and testing.
