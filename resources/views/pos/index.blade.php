@@ -362,6 +362,9 @@ document.addEventListener('click', function (e) {
             const sub_total = getTotal();
             const discount = Number(document.getElementById('discount').value || 0);
             const total = Math.max(sub_total - discount, 0);
+            if (document.getElementById('fullPaid').checked) {
+                document.getElementById('paid_amount').value = total;
+            }
             const paid = Number(document.getElementById('paid_amount').value || 0);
             const due = Math.max(total - paid, 0);
 

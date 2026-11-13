@@ -60,7 +60,7 @@
             </table>
             <nav>             
                 <ul id="pagination-container" style="display: flex; list-style: none; padding: 0;">
-                    <!-- জাভাস্ক্রিপ্ট দিয়ে এখানে পেজিনেশন বাটনগুলো আসবে -->
+                    
                 </ul>
             </nav>
         </div>

@@ -40,6 +40,7 @@ class SaleFlowTest extends TestCase
                 ],
             ],
             'paid' => 4,
+            'discount' => 0,
         ]);
 
         $response->assertOk()
@@ -84,6 +85,7 @@ class SaleFlowTest extends TestCase
                 ],
             ],
             'paid' => 10,
+            'discount' => 0,
         ]);
 
         $response->assertStatus(422);
@@ -92,5 +94,34 @@ class SaleFlowTest extends TestCase
 
         $this->assertSame(2, $medicine->stock);
         $this->assertDatabaseCount('sales', 0);
+    }
+
+    public function test_sale_accepts_full_payment_for_a_fractional_total(): void
+    {
+        $medicine = Medicine::create([
+            'name' => 'Indever',
+            'sell_price' => 0.51,
+            'stock' => 20,
+            'is_active' => true,
+        ]);
+
+        $response = $this->postJson(route('sales.store'), [
+            'items' => [
+                [
+                    'medicine_id' => $medicine->id,
+                    'quantity' => 20,
+                ],
+            ],
+            'paid' => 10.20,
+            'discount' => 0,
+        ]);
+
+        $response->assertOk();
+        $this->assertDatabaseHas('sales', [
+            'total' => 10.20,
+            'paid' => 10.20,
+            'due' => 0,
+        ]);
+        $this->assertSame(0, $medicine->fresh()->stock);
     }
 }

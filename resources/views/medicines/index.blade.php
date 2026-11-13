@@ -17,7 +17,8 @@
                 <div class="row">
                     <div>
                         <label for="name">Brand Name</label>
-                        <input id="name" name="name" required>
+                        <input id="name" name="name" value="{{ old('name') }}" autocomplete="off" autofocus required>
+                        <div id="medicineSuggestions" class="meta" aria-live="polite" style="margin-top: 6px;"></div>
                     </div>
                     <div>
                         <label for="generic_name">Generic Name</label>
@@ -31,7 +32,12 @@
                     </div>
                     <div>
                         <label for="category">Category</label>
-                        <input id="category" name="category" placeholder="Tablet, Syrup, Injection">
+                        <select id="category" name="category" required>
+                            <option value="">Select category</option>
+                            @foreach($categories as $category)
+                                <option value="{{ $category }}" @selected(old('category') === $category)>{{ $category }}</option>
+                            @endforeach
+                        </select>
                     </div>
                 </div>
                 <div class="row">
@@ -136,26 +142,91 @@
 
 
 <script>
+    const medicineCategories = @json($categories);
     const searchInput = document.getElementById('searchMedicine');
     const tableBody = document.getElementById('medicineTable');
+    const medicineNameInput = document.getElementById('name');
+    const medicineSuggestions = document.getElementById('medicineSuggestions');
+    const pageUrl = new URL(window.location.href);
+    let currentPage = Number(pageUrl.searchParams.get('page')) || 1;
+    searchInput.value = pageUrl.searchParams.get('search') || '';
 
-    fetchProducts();   
+    fetchProducts(currentPage, searchInput.value);
 
-    searchInput.addEventListener('input', function () {
-        let query = this.value;          
-         fetchProducts(1, query);      
+    let suggestionTimer;
+    let suggestionRequest = 0;
+    medicineNameInput.addEventListener('input', function () {
+        clearTimeout(suggestionTimer);
+        const query = this.value.trim();
+        const requestId = ++suggestionRequest;
+
+        if (query.length < 2) {
+            medicineSuggestions.replaceChildren();
+            return;
+        }
+
+        suggestionTimer = setTimeout(() => {
+            fetch(`/medicines/suggestions?query=${encodeURIComponent(query)}`, {
+                headers: { 'X-Requested-With': 'XMLHttpRequest' }
+            })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Unable to load medicine suggestions.');
+                    }
+                    return response.json();
+                })
+                .then(names => {
+                    if (requestId !== suggestionRequest) {
+                        return;
+                    }
+
+                    medicineSuggestions.replaceChildren(
+                        ...names.map(name => {
+                            const suggestion = document.createElement('div');
+                            suggestion.textContent = name;
+                            return suggestion;
+                        })
+                    );
+                })
+                .catch(error => console.error('Error loading medicine suggestions:', error));
+        }, 250);
     });
 
-         function fetchProducts(page=1, query = '') {
-            fetch(`/medicines/search?search=${encodeURIComponent(query)}&page=${page}`, {
+    searchInput.addEventListener('input', function () {
+        fetchProducts(1, this.value);
+    });
+
+    function updatePageUrl(page, query) {
+        const url = new URL(window.location.href);
+        if (page > 1) {
+            url.searchParams.set('page', page);
+        } else {
+            url.searchParams.delete('page');
+        }
+        if (query) {
+            url.searchParams.set('search', query);
+        } else {
+            url.searchParams.delete('search');
+        }
+        window.history.replaceState({}, '', url);
+    }
+
+    function fetchProducts(page = currentPage, query = searchInput.value) {
+        currentPage = Number(page) || 1;
+        updatePageUrl(currentPage, query);
+        fetch(`/medicines/search?search=${encodeURIComponent(query)}&page=${currentPage}`, {
             method: 'GET',
             headers: {
                 'X-Requested-With': 'XMLHttpRequest'
             }
         })
-        .then(response => response.json())
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Unable to load medicines.');
+            }
+            return response.json();
+        })
         .then(data => {
-              console.log(data);     
              tableBody.innerHTML = '';
              let medicines = data.data;              
 
@@ -166,11 +237,14 @@
         }
         medicines.forEach(medicine => {
             const row = document.createElement('tr');
+            const categoryOptions = medicineCategories.map(category =>
+                `<option value="${category}" ${medicine.category === category ? 'selected' : ''}>${category}</option>`
+            ).join('');
             row.innerHTML = `
                     <td><input name="name" value="${medicine.name}"></td>
                     <td><input name="generic_name" value="${medicine.generic_name}"></td>
                     <td><input name="brand" value="${medicine.brand}"></td>
-                    <td><input name="category" value="${medicine.category}"></td>
+                    <td><select name="category">${categoryOptions}</select></td>
                     <td><input name="barcode" value="${medicine.barcode ?? ''}"></td>
                     <td><input name="purchase_price" value="${medicine.purchase_price}"></td>
                     <td><input name="sell_price" value="${medicine.sell_price}"></td>
@@ -241,7 +315,7 @@
                 name: row.querySelector('input[name="name"]').value,
                 generic_name: row.querySelector('input[name="generic_name"]').value,
                 brand: row.querySelector('input[name="brand"]').value,
-                category: row.querySelector('input[name="category"]').value,
+                category: row.querySelector('select[name="category"]').value,
                 barcode: row.querySelector('input[name="barcode"]').value,
                 purchase_price: row.querySelector('input[name="purchase_price"]').value,
                 sell_price: row.querySelector('input[name="sell_price"]').value,
@@ -267,13 +341,19 @@
                 .then(response => response.json())
                 .then(response => {
                 if (response.success) {
-                    fetchProducts(searchInput.value); // Refresh the table
+                    fetchProducts(currentPage, searchInput.value);
                     showGreenToast(response.message);
                 } else {
-                    showRedToast('Failed to update medicine.');
+                    const validationMessage = response.errors
+                        ? Object.values(response.errors).flat()[0]
+                        : null;
+                    showRedToast(validationMessage || response.message || 'Failed to update medicine.');
                    }
             })
-            .catch(error => console.error('Error:', error));
+            .catch(error => {
+                console.error('Error:', error);
+                showRedToast('Failed to update medicine.');
+            });
         }        
             
         }
@@ -302,7 +382,7 @@
             .then(data => {
 
                 if (data.success) {
-                    fetchProducts(); 
+                    fetchProducts(currentPage, searchInput.value);
                     showGreenToast(data.message);
                     } else {
                     showRedToast('Failed to delete medicine.');
@@ -320,17 +400,15 @@ function showGreenToast(message) {
     const container = document.getElementById('toast-container');
 	container.innerHTML = '';
 
-    // নতুন টোস্ট এলিমেন্ট তৈরি
     const toast = document.createElement('div');
     toast.className = 'toast-success';
-    
-    // টিক চিহ্নসহ মেসেজ সেট করা
-    toast.innerHTML = `<span>✓</span> <span>${message}</span>`;
-
-    // কন্টেইনারে যুক্ত করা
+    const icon = document.createElement('span');
+    icon.textContent = '✓';
+    const text = document.createElement('span');
+    text.textContent = message;
+    toast.append(icon, text);
     container.appendChild(toast);
 
-    // ৩.৫ সেকেন্ড পর টোস্ট অটোমেটিক ডিলিট হবে
     setTimeout(() => {
         toast.remove();
     }, 3500);
@@ -340,17 +418,15 @@ function showRedToast(message) {
     const container = document.getElementById('toast-container');
 	container.innerHTML = '';
 
-    // নতুন টোস্ট এলিমেন্ট তৈরি
     const toast = document.createElement('div');
     toast.className = 'toast-error';
-    
-    // ক্রস (✖) চিহ্নসহ মেসেজ সেট করা
-    toast.innerHTML = `<span>✖</span> <span>${message}</span>`;
-
-    // কন্টেইনারে যুক্ত করা
+    const icon = document.createElement('span');
+    icon.textContent = '✖';
+    const text = document.createElement('span');
+    text.textContent = message;
+    toast.append(icon, text);
     container.appendChild(toast);
 
-    // ৩.৫ সেকেন্ড পর টোস্ট অটোমেটিক ডিলিট হবে
     setTimeout(() => {
         toast.remove();
     }, 3500);

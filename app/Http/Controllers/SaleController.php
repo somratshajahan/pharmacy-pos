@@ -69,7 +69,7 @@ class SaleController extends Controller
 
                 $sub_total = round($total, 2);
                 $discount= round((float) $validated['discount'], 2);
-                $total = round($sub_total - $discount);
+                $total = round($sub_total - $discount, 2);
                 $paid = round((float) $validated['paid'], 2);
 
                 if ($paid > $total) {

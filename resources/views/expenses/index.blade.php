@@ -16,7 +16,7 @@
                     <div>
                         <label for="expense_category_id">Expense for </label>
                         <select id="expense_category_id" name="expense_category_id" required>
-                            <!-- <option value="">Select Category</option> -->
+                          
                             @forelse($expenseCategories as $category)
                                 <option value="{{ $category->id }}">{{ $category->name }}</option>
                                 @empty
@@ -67,7 +67,7 @@
             </table>  
             <nav>             
                 <ul id="pagination-container" style="display: flex; list-style: none; padding: 0;">
-                    <!-- জাভাস্ক্রিপ্ট দিয়ে এখানে পেজিনেশন বাটনগুলো আসবে -->
+                  
                 </ul>
             </nav>         
         </div>
@@ -113,7 +113,7 @@
                 let activeClass = link.active ? 'active' : '';
                 let disabledClass = !link.url ? 'disabled' : '';
                 
-                // URL থেকে পেজ নম্বর বের করার লজিক
+              
                 let pageNum = link.url ? new URL(link.url, window.location.origin).searchParams.get('page') : 1;
 
                 paginationHtml += `
